@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Smart Tourism City</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#dbe9f4;--pn:#ffffff;--tx:#14202b;--mu:#5b6b7a;--ac:#0e7c86;--bd:#d3dde6;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1822;--pn:#1a2733;--tx:#e8eef4;--mu:#9fb0c0;--ac:#3fc1c9;--bd:#2c3c4b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1822;--pn:#1a2733;--tx:#e8eef4;--mu:#9fb0c0;--ac:#3fc1c9;--bd:#2c3c4b;color-scheme:dark}
+html,body{height:100%;margin:0;overflow:hidden}
+body{background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+canvas{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+#top{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;pointer-events:none;flex-wrap:wrap}
+#top>*{pointer-events:auto}
+h1{font-size:16px;margin:0;background:var(--pn);padding:8px 12px;border-radius:10px;border:1px solid var(--bd)}
+.bt{display:flex;gap:6px;flex-wrap:wrap}
+button{font:inherit;background:var(--pn);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+#pn{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom,0px));max-height:42%;overflow:auto;background:var(--pn);border:1px solid var(--bd);border-radius:14px;padding:14px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+@media(min-width:800px){#pn{left:auto;width:340px;top:70px;bottom:auto;max-height:calc(100% - 100px)}}
+#pn h2{margin:0 0 4px;font-size:18px}
+.tg{display:inline-block;font-size:12px;padding:2px 8px;border-radius:99px;background:var(--ac);color:#fff;margin-bottom:6px}
+.mu{color:var(--mu);font-size:13px}.row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+ul{padding-left:18px;margin:6px 0}
+#lg{position:fixed;left:12px;top:calc(62px + env(safe-area-inset-top,0px));font-size:12px;background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:6px 10px;display:none}
+@media(min-width:800px){#lg{display:block}}
+#lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+</style></head><body>
+<div id="top"><h1>🏙 Smart Tourism City</h1><div class="bt"><button id="ex" style="display:none">⬅ Exit building</button><button id="rs">🏠 Reset view</button><button id="tp" class="p">🗺 My trip (0)</button></div></div>
+<div id="lg"><div><i style="background:#3b82f6"></i>Hotels</div><div><i style="background:#e8743b"></i>Attractions</div><div><i style="background:#d64550"></i>Restaurants</div><div><i style="background:#64748b"></i>Transport</div><div><i style="background:#2fa36b"></i>Info</div></div>
+<div id="pn"></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const COL={hotel:0x3b82f6,attraction:0xe8743b,restaurant:0xd64550,transport:0x64748b,info:0x2fa36b};
+const NAME={hotel:"Hotel",attraction:"Attraction",restaurant:"Restaurant",transport:"Transport",info:"Visitor info"};
+const D=[
+{id:"h1",n:"Grand Aurora Hotel",t:"hotel",x:-20,z:-18,w:10,d:10,h:22,r:4.8,cost:180,o:"Open 24/7",i:"5-star hotel in the city centre with rooftop pool, spa and airport shuttle.",in:[["Deluxe Suite","King bed, balcony and city view. €220/night."],["Rooftop Pool","Heated infinity pool, open 7:00–22:00."],["Concierge Desk","Book tours, taxis and tickets. Free for guests."]]},
+{id:"h2",n:"Seaside Budget Inn",t:"hotel",x:-38,z:-16,w:8,d:8,h:10,r:4.1,cost:60,o:"Reception 6:00–24:00",i:"Friendly 3-star inn with free breakfast, close to the station and old town.",in:[["Twin Room","Two single beds, private bathroom. €60/night."],["Breakfast Hall","Free buffet 7:00–10:00."],["Luggage Room","Free storage before check-in and after check-out."]]},
+{id:"m1",n:"City History Museum",t:"attraction",x:20,z:-18,w:14,d:10,h:12,r:4.7,cost:12,o:"Tue–Sun 9:00–18:00",i:"Two thousand years of city history. Audio guides in 12 languages.",in:[["Roman Hall","Mosaics and coins found under the old town."],["Medieval Gallery","Armor, maps and a model of the old city walls."],["Interactive Lab","Touch-screen time machine for families."]]},
+{id:"tw",n:"Skyline Tower",t:"attraction",x:36,z:-34,w:6,d:6,h:42,r:4.9,cost:20,o:"Daily 10:00–23:00",i:"Panoramic observation deck 180 m above the city, best at sunset.",in:[["Glass Elevator","Reaches the top in 40 seconds."],["Sky Deck","360° views and telescopes."],["Photo Point","Digital souvenir photos, €5."]]},
+{id:"pk",n:"Central Park Gardens",t:"attraction",x:24,z:22,w:16,d:14,h:1.5,r:4.6,cost:0,o:"Daily 6:00–22:00",i:"Large green park with lake, bike rental and free open-air concerts.",in:[["Lake Pavilion","Pedal-boat rental, €8 per hour."],["Bike Station","Smart bikes, scan the QR code to unlock."],["Concert Stage","Free concerts on weekends at 18:00."]]},
+{id:"r1",n:"La Piazza Restaurant",t:"restaurant",x:-18,z:16,w:9,d:8,h:9,r:4.5,cost:28,o:"12:00–23:00",i:"Italian restaurant with wood-fired pizza and a tourist set menu.",in:[["Margherita Pizza","Classic recipe, €11."],["Tourist Menu","Starter, main and dessert, €24."],["Wine Cellar","Regional wines by the glass."]]},
+{id:"r2",n:"Spice Route Kitchen",t:"restaurant",x:-34,z:20,w:8,d:8,h:8,r:4.4,cost:20,o:"11:00–22:00",i:"Street-food inspired kitchen with vegan and halal options.",in:[["Chef Special Bowl","Rice, grilled vegetables and house sauce, €13."],["Vegan Corner","Plant-based dishes, clearly labelled."],["Tea Bar","Iced and hot teas, free refills."]]},
+{id:"st",n:"Central Station",t:"transport",x:12,z:-42,w:14,d:8,h:9,r:4.3,cost:5,o:"Daily 4:30–1:00",i:"Trains, metro and buses. Airport express every 15 minutes.",in:[["Departure Board","Live trains to the airport, coast and mountains."],["Ticket Machines","Day pass €5, 3-day tourist pass €12."],["Left Luggage","Lockers from €4 per day."]]},
+{id:"ic",n:"Tourist Info Center",t:"info",x:-8,z:-9,w:6,d:6,h:7,r:4.8,cost:0,o:"Daily 8:00–20:00",i:"Free maps, trip planning help and guided walking tour tickets.",in:[["Free City Map","Printed and offline versions."],["Tour Desk","Walking, bike and boat tours."],["Lost and Found","Staff can help with emergencies."]]},
+{id:"mk",n:"Old Town Market",t:"attraction",x:44,z:8,w:8,d:8,h:6,r:4.5,cost:10,o:"Daily 8:00–19:00",i:"Local food, crafts and souvenirs in a historic hall.",in:[["Cheese Stand","Free tastings every hour."],["Craft Corner","Hand-made ceramics and textiles."],["Street Food Court","Snacks from €3."]]}
+];
+const dark=matchMedia("(prefers-color-scheme:dark)").matches;
+const R=new THREE.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));R.setSize(innerWidth,innerHeight);document.body.prepend(R.domElement);
+const S=new THREE.Scene();S.background=new THREE.Color(dark?0x0d1822:0xbfdcf0);S.fog=new THREE.Fog(dark?0x0d1822:0xbfdcf0,90,260);
+const cam=new THREE.PerspectiveCamera(55,innerWidth/innerHeight,.5,600);cam.position.set(70,60,80);
+const ctl=new THREE.OrbitControls(cam,R.domElement);ctl.enableDamping=true;ctl.maxPolarAngle=1.45;ctl.minDistance=12;ctl.maxDistance=150;
+S.add(new THREE.AmbientLight(0xffffff,dark?.45:.7));const sun=new THREE.DirectionalLight(0xffffff,dark?.5:.9);sun.position.set(60,100,40);S.add(sun);
+const M=(c)=>new THREE.MeshLambertMaterial({color:c});
+const gr=new THREE.Mesh(new THREE.PlaneGeometry(240,240),M(dark?0x24402f:0x8fcf8f));gr.rotation.x=-Math.PI/2;S.add(gr);
+function road(w,d){const r=new THREE.Mesh(new THREE.PlaneGeometry(w,d),M(0x3a3f47));r.rotation.x=-Math.PI/2;r.position.y=.05;S.add(r)}
+road(120,6);road(6,120);
+function label(t,s){const c=document.createElement("canvas");c.width=512;c.height=96;const g=c.getContext("2d");g.fillStyle="rgba(15,25,35,.82)";g.fillRect(0,0,512,96);g.fillStyle="#fff";g.font="bold 38px sans-serif";g.textAlign="center";g.fillText(t,256,64);const p=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),depthTest:false}));p.scale.set(s,s*96/512,1);return p}
+function wt(c,rx,ry){const k=document.createElement("canvas");k.width=k.height=64;const g=k.getContext("2d");g.fillStyle=c;g.fillRect(0,0,64,64);g.fillStyle="rgba(255,248,200,.9)";for(let i=0;i<2;i++)for(let j=0;j<2;j++)g.fillRect(6+i*30,8+j*28,20,16);const t=new THREE.CanvasTexture(k);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
+const hit=[],byId={};
+D.forEach(b=>{byId[b.id]=b;const c="#"+new THREE.Color(COL[b.t]).getHexString();const pk=b.id==="pk";
+ const side=(rx)=>new THREE.MeshLambertMaterial({map:wt(c,rx,Math.max(1,b.h/4))});
+ const mats=pk?M(0x3fae5a):[side(b.d/4),side(b.d/4),M(0x2b3440),M(0x2b3440),side(b.w/4),side(b.w/4)];
+ const m=new THREE.Mesh(new THREE.BoxGeometry(b.w,b.h,b.d),mats);m.position.set(b.x,b.h/2,b.z);m.userData.id=b.id;S.add(m);hit.push(m);b.pos=m.position;
+ const l=label(b.n,Math.max(14,b.w*1.6));l.position.set(b.x,b.h+3,b.z);S.add(l)});
+const tr=new THREE.ConeGeometry(1.6,5,6),tm=M(0x2e8b4e);
+for(let i=0;i<70;i++){const x=(Math.random()-.5)*110,z=(Math.random()-.5)*110;if(Math.abs(x)<6||Math.abs(z)<6||D.some(b=>Math.abs(x-b.x)<b.w/2+3&&Math.abs(z-b.z)<b.d/2+3))continue;const t=new THREE.Mesh(tr,tm);t.position.set(x,2.5,z);S.add(t)}
+const cars=[];[[0,1.5,1],[0,-1.5,-1],[1,1.5,1],[1,-1.5,-1],[0,1.5,1]].forEach(([ax,ln,dir],i)=>{const c=new THREE.Mesh(new THREE.BoxGeometry(ax?1.4:3,1.2,ax?3:1.4),M([0xffd34d,0xff5d5d,0x5dd6ff,0xffffff,0xb48cff][i]));c.userData={ax,dir,sp:.25+Math.random()*.2};ax?c.position.set(ln,.7,-60+i*30):c.position.set(-60+i*35,.7,ln);S.add(c);cars.push(c)});
+const ring=new THREE.Mesh(new THREE.RingGeometry(1,1.25,48),new THREE.MeshBasicMaterial({color:0xffd34d,side:2,depthTest:false}));ring.rotation.x=-Math.PI/2;ring.visible=false;ring.position.y=.3;S.add(ring);
+const IN=new THREE.Group();IN.position.set(300,0,300);S.add(IN);const IO=new THREE.Vector3(300,0,300);
+let mode="city",cur=null,trip=[],routeLine=null,saved=null,ft=null,iHit=[];
+const pn=document.getElementById("pn"),ex=document.getElementById("ex");
+const stars=r=>"★ "+r.toFixed(1);
+function fly(p,t){ft={p0:cam.position.clone(),t0:ctl.target.clone(),p1:p,t1:t,k:0}}
+function showB(b){cur=b;ring.visible=true;ring.position.set(b.x,.3,b.z);ring.scale.setScalar(Math.max(b.w,b.d)*.75);
+ const inT=trip.includes(b.id);
+ pn.innerHTML=`<span class="tg" style="background:#${new THREE.Color(COL[b.t]).getHexString()}">${NAME[b.t]}</span><h2>${b.n}</h2><div class="mu">${stars(b.r)} · ${b.cost?"from €"+b.cost:"Free entry"} · ${b.o}</div><p>${b.i}</p><div class="mu">Inside: ${b.in.map(x=>x[0]).join(", ")}</div><div class="row"><button class="p" data-a="enter" data-v="${b.id}">🚪 Enter building</button><button data-a="trip" data-v="${b.id}">${inT?"✔ In my trip (remove)":"＋ Add to trip"}</button></div>`}
+function showHome(){cur=null;ring.visible=false;pn.innerHTML=`<h2>Welcome, traveller!</h2><p>Explore the city: drag to rotate, scroll or pinch to zoom, right-drag to pan. Tap any building to see details, then enter it to look inside.</p><div class="mu">Tip: add places to <b>My trip</b> to get a route, distance and budget.</div>`}
+function showTrip(){ring.visible=false;let km=0,cost=0;const pts=trip.map(i=>byId[i]);pts.forEach((b,i)=>{cost+=b.cost;if(i)km+=Math.hypot(b.x-pts[i-1].x,b.z-pts[i-1].z)*.03});
+ pn.innerHTML=`<h2>🗺 My trip plan</h2>`+(pts.length?`<ol style="padding-left:20px">${pts.map(b=>`<li><b>${b.n}</b> <span class="mu">(${NAME[b.t]}, €${b.cost})</span> <button data-a="trip" data-v="${b.id}">✕</button></li>`).join("")}</ol><p>Walking distance ≈ <b>${km.toFixed(1)} km</b> (~${Math.round(km/5*60)} min)<br>Estimated budget ≈ <b>€${cost}</b> per person</p><div class="row"><button data-a="clear">Clear trip</button></div>`:`<p class="mu">No stops yet. Tap a building and press “Add to trip”.</p>`)}
+function route(){if(routeLine){S.remove(routeLine);routeLine=null}document.getElementById("tp").textContent=`🗺 My trip (${trip.length})`;if(trip.length<2)return;
+ routeLine=new THREE.Line(new THREE.BufferGeometry().setFromPoints(trip.map(i=>new THREE.Vector3(byId[i].x,.6,byId[i].z))),new THREE.LineBasicMaterial({color:0xffd34d,depthTest:false}));S.add(routeLine)}
+function itemMesh(t,c){const g=new THREE.Group();const add=(m,y)=>{m.position.y=y;g.add(m);return m};
+ if(t==="hotel"){add(new THREE.Mesh(new THREE.BoxGeometry(3,.8,4.2),M(0xf1f1f1)),.4);add(new THREE.Mesh(new THREE.BoxGeometry(3,.4,1),M(c)),1)}
+ else if(t==="restaurant"){add(new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,.2,24),M(0x8a5a3a)),1.1);add(new THREE.Mesh(new THREE.CylinderGeometry(.2,.2,1.1,10),M(0x555555)),.55);add(new THREE.Mesh(new THREE.SphereGeometry(.5,16,12),M(c)),1.5)}
+ else if(t==="transport"){add(new THREE.Mesh(new THREE.BoxGeometry(4,2.4,.3),M(0x111820)),2);add(new THREE.Mesh(new THREE.BoxGeometry(3.4,.3,.1),M(0x4ade80)),2.4)}
+ else{add(new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.3,1,20),M(0xdddddd)),.5);add(new THREE.Mesh(new THREE.TorusKnotGeometry(.5,.18,60,8),M(c)),1.9)}
+ return g}
+function build(b){while(IN.children.length)IN.remove(IN.children[0]);iHit=[];const c=COL[b.t];
+ const fl=new THREE.Mesh(new THREE.PlaneGeometry(20,20),M(0xc9b99a));fl.rotation.x=-Math.PI/2;IN.add(fl);
+ [[0,-10,20,.4],[0,10,20,.4],[-10,0,.4,20],[10,0,.4,20]].forEach(([x,z,w,d])=>{const w_=new THREE.Mesh(new THREE.BoxGeometry(w,7,d),M(new THREE.Color(c).lerp(new THREE.Color(0xffffff),.7)));w_.position.set(x,3.5,z);IN.add(w_)});
+ const L=new THREE.PointLight(0xffffff,.8,60);L.position.set(0,8,0);IN.add(L);
+ const t=label(b.n,12);t.position.set(0,6,-9.5);IN.add(t);
+ b.in.forEach((it,i)=>{const g=itemMesh(b.t,c);g.position.set((i-1)*6,0,-4);g.traverse(o=>{if(o.isMesh){o.userData.item=[b.id,i];iHit.push(o)}});IN.add(g);const l=label(it[0],5);l.position.set((i-1)*6,4.2,-4);IN.add(l)})}
+function showItem(b,i){const it=b.in[i];pn.innerHTML=`<span class="tg">Inside · ${b.n}</span><h2>${it[0]}</h2><p>${it[1]}</p><div class="row"><button data-a="back">◀ Building info</button></div>`}
+function showInside(b){pn.innerHTML=`<span class="tg">Inside</span><h2>${b.n}</h2><p class="mu">Rotate and zoom the room. Click the objects to learn more.</p><ul>${b.in.map((x,i)=>`<li><a href="#" data-a="item" data-v="${i}" style="color:var(--ac)">${x[0]}</a></li>`).join("")}</ul><div class="row"><button data-a="exit">⬅ Back to the street</button></div>`}
+const act={
+ enter(id){const b=byId[id];saved={p:cam.position.clone(),t:ctl.target.clone()};mode="in";cur=b;build(b);ring.visible=false;ex.style.display="";
+  ctl.minDistance=4;ctl.maxDistance=16;ctl.maxPolarAngle=1.5;ctl.target.set(IO.x,2,IO.z);cam.position.set(IO.x,7,IO.z+13);S.fog.far=1e4;showInside(b)},
+ exit(){mode="city";ex.style.display="none";ctl.minDistance=12;ctl.maxDistance=150;ctl.maxPolarAngle=1.45;S.fog.far=260;cam.position.copy(saved.p);ctl.target.copy(saved.t);showB(cur)},
+ item(i){showItem(cur,+i)},back(){showInside(cur)},
+ trip(id){const k=trip.indexOf(id);k<0?trip.push(id):trip.splice(k,1);route();pn.querySelector("h2").textContent==="🗺 My trip plan"?showTrip():showB(byId[id])},
+ clear(){trip=[];route();showTrip()}};
+pn.onclick=e=>{const a=e.target.closest("[data-a]");if(!a)return;e.preventDefault();act[a.dataset.a](a.dataset.v)};
+ex.onclick=act.exit;
+document.getElementById("tp").onclick=()=>{if(mode==="in")act.exit();showTrip()};
+document.getElementById("rs").onclick=()=>{if(mode==="in")act.exit();fly(new THREE.Vector3(70,60,80),new THREE.Vector3(0,0,0));showHome()};
+const ray=new THREE.Raycaster(),mv=new THREE.Vector2();let dn=null;
+R.domElement.addEventListener("pointerdown",e=>dn=[e.clientX,e.clientY]);
+R.domElement.addEventListener("pointerup",e=>{if(!dn||Math.hypot(e.clientX-dn[0],e.clientY-dn[1])>6)return;mv.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(mv,cam);
+ if(mode==="city"){const h=ray.intersectObjects(hit)[0];if(h){const b=byId[h.object.userData.id];showB(b);fly(new THREE.Vector3(b.x+b.w+18,Math.max(18,b.h*.8+10),b.z+b.d+22),new THREE.Vector3(b.x,b.h/2,b.z))}}
+ else{const h=ray.intersectObjects(iHit)[0];if(h){const [id,i]=h.object.userData.item;showItem(byId[id],i)}}});
+addEventListener("resize",()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();R.setSize(innerWidth,innerHeight)});
+showHome();
+(function loop(){requestAnimationFrame(loop);
+ if(ft){ft.k=Math.min(1,ft.k+.04);const e=ft.k*ft.k*(3-2*ft.k);cam.position.lerpVectors(ft.p0,ft.p1,e);ctl.target.lerpVectors(ft.t0,ft.t1,e);if(ft.k>=1)ft=null}
+ cars.forEach(c=>{const u=c.userData,a=u.ax?"z":"x";c.position[a]+=u.sp*u.dir;if(Math.abs(c.position[a])>58)c.position[a]=-58*u.dir});
+ ctl.update();R.render(S,cam)})();
+</script></body></html>
